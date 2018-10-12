@@ -21,7 +21,7 @@ import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.LocaleUtils;
-import org.elasticsearch.index.mapper.FieldMapper;
+import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.search.fetch.FetchPhaseExecutionException;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.elasticsearch.search.fetch.subphase.highlight.Highlighter;
@@ -57,7 +57,7 @@ public class ExperimentalHighlighter implements Highlighter {
     private static final Logger log = ESLoggerFactory.getLogger(ExperimentalHighlighter.class);
 
     @Override
-    public boolean canHighlight(FieldMapper field) {
+    public boolean canHighlight(MappedFieldType mappedFieldType) {
         return true;
     }
 

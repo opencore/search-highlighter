@@ -54,6 +54,8 @@ public class FieldWrapper {
      */
     private int positionGap = 1;
 
+    private FieldMapper mapper;
+
     /**
      * Build a wrapper around the default field in the context.
      */
@@ -71,9 +73,9 @@ public class FieldWrapper {
     public FieldWrapper(HighlightExecutionContext executionContext, HighlighterContext context,
             BasicQueryWeigher weigher, String fieldName) {
         assert !context.fieldName.equals(fieldName);
-        FieldMapper mapper = context.context.mapperService().documentMapper(context.hitContext.hit().getType()).mappers().smartNameFieldMapper(fieldName);
+        mapper = (FieldMapper) context.context.mapperService().documentMapper(context.hitContext.hit().getType()).mappers().getMapper(fieldName);
         this.executionContext = executionContext;
-        this.context = new HighlighterContext(fieldName, context.field, mapper, context.context,
+        this.context = new HighlighterContext(fieldName, context.field, mapper.fieldType(), context.context,
                 context.hitContext, context.query);
         this.weigher = weigher;
     }
@@ -105,7 +107,7 @@ public class FieldWrapper {
 
     public List<String> getFieldValues() throws IOException {
         if (values == null) {
-            List<Object> objs = HighlightUtils.loadFieldValues(context.field, context.mapper,
+            List<Object> objs = HighlightUtils.loadFieldValues(context.field, context.fieldType,
                     context.context, context.hitContext);
             values = objs.stream().map(Object::toString).collect(toCollection(() -> new ArrayList<>(objs.size())));
         }
@@ -245,29 +247,29 @@ public class FieldWrapper {
     }
 
     private boolean canUsePostingsHitEnum() {
-        return context.mapper.fieldType().indexOptions() == IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS;
+        return context.fieldType.indexOptions() == IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS;
     }
 
     private boolean canUseVectorsHitEnum() {
-        return context.mapper.fieldType().storeTermVectors()
-                && context.mapper.fieldType().storeTermVectorOffsets()
-                && context.mapper.fieldType().storeTermVectorPositions();
+        return context.fieldType.storeTermVectors()
+                && context.fieldType.storeTermVectorOffsets()
+                && context.fieldType.storeTermVectorPositions();
     }
 
     private HitEnum buildPostingsHitEnum() throws IOException {
         return PostingsHitEnum.fromPostings(context.hitContext.reader(),
-                context.hitContext.docId(), context.mapper.fieldType().name(),
+                context.hitContext.docId(), context.fieldType.name(),
                 weigher.acceptableTerms(), getQueryWeigher(), getCorpusWeigher(false), weigher);
     }
 
     private HitEnum buildTermVectorsHitEnum() throws IOException {
         return PostingsHitEnum.fromTermVectors(context.hitContext.reader(),
-                context.hitContext.docId(), context.mapper.fieldType().name(),
+                context.hitContext.docId(), context.fieldType.name(),
                 weigher.acceptableTerms(), getQueryWeigher(), getCorpusWeigher(false), weigher);
     }
 
     private HitEnum buildTokenStreamHitEnum() throws IOException {
-        Analyzer analyzer = context.mapper.fieldType().indexAnalyzer();
+        Analyzer analyzer = context.fieldType.indexAnalyzer();
         if (analyzer == null) {
             analyzer = context.context.mapperService().indexAnalyzer();
         }
@@ -352,8 +354,8 @@ public class FieldWrapper {
 
     public int getPositionGap() {
         if (positionGap < 0) {
-            if (context.mapper instanceof TextFieldMapper) {
-                positionGap = ((TextFieldMapper) context.mapper).getPositionIncrementGap();
+            if (mapper instanceof TextFieldMapper) {
+                positionGap = ((TextFieldMapper) mapper).getPositionIncrementGap();
             } else {
                 positionGap = 1;
             }
@@ -365,6 +367,6 @@ public class FieldWrapper {
      * Does this field exist?
      */
     public boolean exists() {
-        return context.mapper != null;
+        return mapper != null;
     }
 }
